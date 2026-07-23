@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="FeedbackLoop is a production-ready customer feedback collector with public forms, moderation workflows, analytics, and safe CSV export."
+    />
+    <meta name="theme-color" content="#4f46e5" />
+    <title>FeedbackLoop — Customer Feedback Collector</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --background: #f8fafc;
+        --surface: #ffffff;
+        --surface-dark: #0f172a;
+        --foreground: #0f172a;
+        --muted: #64748b;
+        --border: #e2e8f0;
+        --primary: #4f46e5;
+        --primary-dark: #4338ca;
+        --primary-soft: #eef2ff;
+        --accent: #0d9488;
+        --shadow: 0 24px 70px rgba(79, 70, 229, 0.16);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        background: var(--background);
+        color: var(--foreground);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      a:focus-visible {
+        outline: 3px solid rgba(79, 70, 229, 0.3);
+        outline-offset: 3px;
+      }
+
+      .container {
+        width: min(1180px, calc(100% - 40px));
+        margin: 0 auto;
+      }
+
+      .site-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        border-bottom: 1px solid rgba(226, 232, 240, 0.92);
+        background: rgba(255, 255, 255, 0.92);
+        backdrop-filter: blur(16px);
+      }
+
+      .nav {
+        display: flex;
+        min-height: 72px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 1.08rem;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border-radius: 10px;
+        background: var(--primary);
+        color: white;
+        font-size: 0.95rem;
+        box-shadow: 0 8px 20px rgba(79, 70, 229, 0.28);
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        color: #475569;
+        font-size: 0.92rem;
+        font-weight: 650;
+      }
+
+      .button {
+        display: inline-flex;
+        min-height: 44px;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        border: 1px solid transparent;
+        border-radius: 10px;
+        padding: 10px 16px;
+        font-weight: 750;
+        transition:
+          transform 150ms ease,
+          background-color 150ms ease,
+          border-color 150ms ease;
+      }
+
+      .button:hover {
+        transform: translateY(-1px);
+      }
+
+      .button-primary {
+        background: var(--primary);
+        color: white;
+      }
+
+      .button-primary:hover {
+        background: var(--primary-dark);
+      }
+
+      .button-secondary {
+        border-color: #cbd5e1;
+        background: white;
+        color: #334155;
+      }
+
+      .button-secondary:hover {
+        border-color: #94a3b8;
+        background: #f8fafc;
+      }
+
+      .hero {
+        overflow: hidden;
+        border-bottom: 1px solid var(--border);
+        background:
+          radial-gradient(circle at 78% 20%, rgba(99, 102, 241, 0.12), transparent 28%),
+          linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+      }
+
+      .hero-grid {
+        display: grid;
+        align-items: center;
+        gap: 68px;
+        padding: 96px 0 104px;
+        grid-template-columns: minmax(0, 1.02fr) minmax(420px, 0.98fr);
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border-radius: 999px;
+        background: var(--primary-soft);
+        color: #4338ca;
+        padding: 7px 12px;
+        font-size: 0.82rem;
+        font-weight: 800;
+      }
+
+      .eyebrow-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: var(--accent);
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        max-width: 720px;
+        margin-bottom: 24px;
+        font-size: clamp(3rem, 6vw, 4.6rem);
+        line-height: 0.98;
+        letter-spacing: -0.058em;
+      }
+
+      .hero-copy > p {
+        max-width: 680px;
+        margin-bottom: 0;
+        color: #475569;
+        font-size: 1.14rem;
+        line-height: 1.75;
+      }
+
+      .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 30px;
+      }
+
+      .checks {
+        display: grid;
+        gap: 12px 24px;
+        margin: 32px 0 0;
+        padding: 0;
+        color: #475569;
+        font-size: 0.91rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        list-style: none;
+      }
+
+      .checks li {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+      }
+
+      .check {
+        display: grid;
+        flex: 0 0 auto;
+        width: 20px;
+        height: 20px;
+        place-items: center;
+        border-radius: 999px;
+        background: #ccfbf1;
+        color: #0f766e;
+        font-size: 0.72rem;
+        font-weight: 900;
+      }
+
+      .dashboard-shell {
+        position: relative;
+        border: 1px solid #1e293b;
+        border-radius: 20px;
+        background: var(--surface-dark);
+        padding: 22px;
+        box-shadow: var(--shadow);
+      }
+
+      .dashboard-shell::before {
+        position: absolute;
+        top: -80px;
+        right: -70px;
+        width: 230px;
+        height: 230px;
+        border-radius: 999px;
+        background: rgba(99, 102, 241, 0.3);
+        filter: blur(55px);
+        content: "";
+      }
+
+      .dashboard {
+        position: relative;
+        border-radius: 14px;
+        background: white;
+        padding: 22px;
+      }
+
+      .dashboard-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 17px;
+      }
+
+      .dashboard-head p,
+      .metric span,
+      .chart-head span {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.78rem;
+      }
+
+      .dashboard-head h2 {
+        margin: 4px 0 0;
+        font-size: 1.12rem;
+      }
+
+      .workspace {
+        border-radius: 9px;
+        background: var(--primary-soft);
+        color: #4338ca;
+        padding: 9px 11px;
+        font-size: 0.74rem;
+        font-weight: 800;
+      }
+
+      .metrics {
+        display: grid;
+        gap: 11px;
+        margin-top: 18px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .metric,
+      .chart {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 15px;
+      }
+
+      .metric strong {
+        display: block;
+        margin-bottom: 3px;
+        font-size: 1.45rem;
+      }
+
+      .chart {
+        margin-top: 12px;
+      }
+
+      .chart-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        font-size: 0.82rem;
+        font-weight: 800;
+      }
+
+      .bars {
+        display: grid;
+        gap: 10px;
+        margin-top: 17px;
+      }
+
+      .bar-row {
+        display: grid;
+        align-items: center;
+        gap: 10px;
+        color: #475569;
+        font-size: 0.7rem;
+        font-weight: 800;
+        grid-template-columns: 12px 1fr;
+      }
+
+      .bar-track {
+        height: 7px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #f1f5f9;
+      }
+
+      .bar-fill {
+        height: 100%;
+        border-radius: inherit;
+        background: var(--primary);
+      }
+
+      .section {
+        padding: 88px 0;
+      }
+
+      .section-white {
+        border-bottom: 1px solid var(--border);
+        background: white;
+      }
+
+      .section-heading {
+        max-width: 720px;
+      }
+
+      .kicker {
+        margin-bottom: 12px;
+        color: #4338ca;
+        font-size: 0.78rem;
+        font-weight: 850;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+      }
+
+      .section-heading h2 {
+        margin-bottom: 16px;
+        font-size: clamp(2rem, 4vw, 3rem);
+        line-height: 1.08;
+        letter-spacing: -0.042em;
+      }
+
+      .section-heading > p {
+        margin-bottom: 0;
+        color: var(--muted);
+        font-size: 1.03rem;
+        line-height: 1.75;
+      }
+
+      .feature-grid {
+        display: grid;
+        gap: 18px;
+        margin-top: 40px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .feature {
+        border: 1px solid var(--border);
+        border-radius: 15px;
+        background: white;
+        padding: 24px;
+      }
+
+      .feature-number {
+        display: grid;
+        width: 42px;
+        height: 42px;
+        place-items: center;
+        border-radius: 12px;
+        background: var(--primary-soft);
+        color: #4338ca;
+        font-weight: 900;
+      }
+
+      .feature h3 {
+        margin: 20px 0 9px;
+        font-size: 1rem;
+      }
+
+      .feature p {
+        margin-bottom: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+        line-height: 1.65;
+      }
+
+      .workflow {
+        display: grid;
+        gap: 22px;
+        margin-top: 42px;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+      }
+
+      .workflow-step {
+        position: relative;
+        border-top: 3px solid #c7d2fe;
+        padding-top: 18px;
+      }
+
+      .workflow-step:not(:last-child)::after {
+        position: absolute;
+        top: -6px;
+        right: -14px;
+        width: 9px;
+        height: 9px;
+        border-top: 2px solid #818cf8;
+        border-right: 2px solid #818cf8;
+        transform: rotate(45deg);
+        content: "";
+      }
+
+      .workflow-step span {
+        color: #4338ca;
+        font-size: 0.74rem;
+        font-weight: 850;
+        text-transform: uppercase;
+      }
+
+      .workflow-step h3 {
+        margin: 8px 0 7px;
+        font-size: 0.98rem;
+      }
+
+      .workflow-step p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.84rem;
+        line-height: 1.6;
+      }
+
+      .security-card {
+        display: grid;
+        align-items: center;
+        gap: 46px;
+        border-radius: 20px;
+        background: var(--surface-dark);
+        color: white;
+        padding: 46px;
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .security-card h2 {
+        margin-bottom: 14px;
+        font-size: clamp(1.8rem, 4vw, 2.7rem);
+        letter-spacing: -0.04em;
+      }
+
+      .security-card p {
+        margin: 0;
+        color: #cbd5e1;
+        line-height: 1.75;
+      }
+
+      .security-list {
+        display: grid;
+        gap: 12px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .security-list li {
+        border: 1px solid #334155;
+        border-radius: 11px;
+        background: rgba(30, 41, 59, 0.82);
+        padding: 13px 15px;
+        color: #e2e8f0;
+        font-size: 0.9rem;
+      }
+
+      .site-footer {
+        border-top: 1px solid var(--border);
+        background: white;
+        padding: 32px 0;
+      }
+
+      .footer-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      @media (max-width: 980px) {
+        .hero-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .dashboard-shell {
+          width: min(620px, 100%);
+        }
+
+        .feature-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .workflow {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .workflow-step:not(:last-child)::after {
+          display: none;
+        }
+
+        .security-card {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 680px) {
+        .container {
+          width: min(100% - 28px, 1180px);
+        }
+
+        .nav-links > a:not(.button) {
+          display: none;
+        }
+
+        .hero-grid {
+          gap: 48px;
+          padding: 70px 0 76px;
+        }
+
+        h1 {
+          font-size: clamp(2.8rem, 14vw, 4rem);
+        }
+
+        .checks,
+        .feature-grid,
+        .workflow {
+          grid-template-columns: 1fr;
+        }
+
+        .dashboard-shell {
+          padding: 13px;
+        }
+
+        .dashboard {
+          padding: 16px;
+        }
+
+        .dashboard-head {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .section {
+          padding: 68px 0;
+        }
+
+        .security-card {
+          padding: 28px 22px;
+        }
+
+        .footer-inner {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+
+        .button {
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="container nav" aria-label="Primary navigation">
+        <a class="brand" href="#top" aria-label="FeedbackLoop preview home">
+          <span class="brand-mark" aria-hidden="true">FL</span>
+          <span>FeedbackLoop</span>
+        </a>
+        <div class="nav-links">
+          <a href="#capabilities">Capabilities</a>
+          <a href="#workflow">Workflow</a>
+          <a
+            class="button button-primary"
+            href="https://github.com/viktorkiramman-arch/customer-feedback-collector"
+          >
+            View source <span aria-hidden="true">↗</span>
+          </a>
+        </div>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="container hero-grid">
+          <div class="hero-copy">
+            <span class="eyebrow">
+              <span class="eyebrow-dot" aria-hidden="true"></span>
+              Customer feedback operations
+            </span>
+            <h1>Turn customer feedback into measurable action.</h1>
+            <p>
+              FeedbackLoop brings public collection, operational review,
+              moderation, resolution tracking, analytics, and safe exports into
+              one focused workspace.
+            </p>
+            <div class="hero-actions">
+              <a class="button button-primary" href="#workflow">
+                Explore the workflow <span aria-hidden="true">↓</span>
+              </a>
+              <a
+                class="button button-secondary"
+                href="https://github.com/viktorkiramman-arch/customer-feedback-collector#local-setup"
+              >
+                Run the full app
+              </a>
+            </div>
+            <ul class="checks">
+              <li><span class="check" aria-hidden="true">✓</span>Anonymous public submissions</li>
+              <li><span class="check" aria-hidden="true">✓</span>Actionable resolution workflow</li>
+              <li><span class="check" aria-hidden="true">✓</span>Search and combined filters</li>
+              <li><span class="check" aria-hidden="true">✓</span>Formula-safe CSV export</li>
+            </ul>
+          </div>
+
+          <div class="dashboard-shell" aria-label="Feedback dashboard preview">
+            <div class="dashboard">
+              <div class="dashboard-head">
+                <div>
+                  <p>Last 30 days</p>
+                  <h2>Feedback overview</h2>
+                </div>
+                <span class="workspace">Sample Business</span>
+              </div>
+              <div class="metrics">
+                <div class="metric"><strong>160</strong><span>Responses</span></div>
+                <div class="metric"><strong>4.1</strong><span>Average rating</span></div>
+                <div class="metric"><strong>24</strong><span>Negative</span></div>
+                <div class="metric"><strong>11</strong><span>Need action</span></div>
+              </div>
+              <div class="chart">
+                <div class="chart-head">
+                  <strong>Rating distribution</strong>
+                  <span>160 total</span>
+                </div>
+                <div class="bars" aria-label="Sample rating distribution">
+                  <div class="bar-row"><span>1</span><div class="bar-track"><div class="bar-fill" style="width: 15%"></div></div></div>
+                  <div class="bar-row"><span>2</span><div class="bar-track"><div class="bar-fill" style="width: 28%"></div></div></div>
+                  <div class="bar-row"><span>3</span><div class="bar-track"><div class="bar-fill" style="width: 45%"></div></div></div>
+                  <div class="bar-row"><span>4</span><div class="bar-track"><div class="bar-fill" style="width: 76%"></div></div></div>
+                  <div class="bar-row"><span>5</span><div class="bar-track"><div class="bar-fill" style="width: 100%"></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section-white" id="capabilities">
+        <div class="container">
+          <div class="section-heading">
+            <p class="kicker">One complete workspace</p>
+            <h2>Built for the work that happens after feedback arrives.</h2>
+            <p>
+              The full application combines a mobile-first customer experience
+              with the controls administrators need to review, prioritize, and
+              resolve every response.
+            </p>
+          </div>
+          <div class="feature-grid">
+            <article class="feature">
+              <span class="feature-number" aria-hidden="true">01</span>
+              <h3>Focused feedback forms</h3>
+              <p>Collect ratings, business-defined categories, and optional written feedback.</p>
+            </article>
+            <article class="feature">
+              <span class="feature-number" aria-hidden="true">02</span>
+              <h3>Useful summaries</h3>
+              <p>See response volume, average rating, category trends, and unresolved issues.</p>
+            </article>
+            <article class="feature">
+              <span class="feature-number" aria-hidden="true">03</span>
+              <h3>Fast review workflow</h3>
+              <p>Search, combine filters, prioritize, moderate, and resolve from one dashboard.</p>
+            </article>
+            <article class="feature">
+              <span class="feature-number" aria-hidden="true">04</span>
+              <h3>Safe data export</h3>
+              <p>Download filter-aware UTF-8 CSV reports with spreadsheet formula protection.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="workflow">
+        <div class="container">
+          <div class="section-heading">
+            <p class="kicker">Operational workflow</p>
+            <h2>Collect, review, assign, resolve, and measure.</h2>
+            <p>
+              Every stage is represented in the product, from anonymous public
+              submission through administrator review and measurable resolution.
+            </p>
+          </div>
+          <div class="workflow">
+            <article class="workflow-step">
+              <span>Step 1</span>
+              <h3>Collect</h3>
+              <p>Share a simple public form that works on small screens.</p>
+            </article>
+            <article class="workflow-step">
+              <span>Step 2</span>
+              <h3>Review</h3>
+              <p>Search and filter by rating, category, date, moderation, and state.</p>
+            </article>
+            <article class="workflow-step">
+              <span>Step 3</span>
+              <h3>Prioritize</h3>
+              <p>Mark urgency and move feedback into an investigation workflow.</p>
+            </article>
+            <article class="workflow-step">
+              <span>Step 4</span>
+              <h3>Resolve</h3>
+              <p>Record moderation decisions and clear resolution summaries.</p>
+            </article>
+            <article class="workflow-step">
+              <span>Step 5</span>
+              <h3>Measure</h3>
+              <p>Use dashboard trends and safe CSV exports for reporting.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section-white">
+        <div class="container">
+          <div class="security-card">
+            <div>
+              <p class="kicker">Private by design</p>
+              <h2>Security is part of the workflow, not an afterthought.</h2>
+              <p>
+                FeedbackLoop validates untrusted input on the server, refreshes
+                current authorization state for protected actions, and keeps
+                organization data isolated throughout the application.
+              </p>
+            </div>
+            <ul class="security-list">
+              <li>Current membership and role checks for protected operations</li>
+              <li>Database-backed rate limiting and idempotency</li>
+              <li>Tenant-scoped Prisma access and audit records</li>
+              <li>Formula-safe exports without anti-abuse data</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <span>FeedbackLoop — Customer Feedback Collector</span>
+        <a href="https://github.com/viktorkiramman-arch/customer-feedback-collector">
+          Source code and local demo instructions <span aria-hidden="true">↗</span>
+        </a>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,251 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum FormStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum SubmissionStatus {
+  NEW
+  REVIEWED
+  FLAGGED
+  SPAM
+  ARCHIVED
+}
+
+enum WorkflowStatus {
+  OPEN
+  INVESTIGATING
+  ACTION_PLANNED
+  RESOLVED
+  NO_ACTION
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+model User {
+  id              String   @id @default(uuid()) @db.Uuid
+  email           String   @unique @db.VarChar(320)
+  name            String?  @db.VarChar(120)
+  passwordHash    String?  @map("password_hash")
+  emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz(6)
+  isDisabled      Boolean  @default(false) @map("is_disabled")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  memberships       OrganizationMembership[]
+  createdForms      FeedbackForm[]             @relation("FormCreator")
+  createdCategories FeedbackCategory[]         @relation("CategoryCreator")
+  reviewedFeedback  FeedbackSubmission[]       @relation("FeedbackReviewer")
+  assignedFeedback  FeedbackSubmission[]       @relation("FeedbackAssignee")
+  auditLogs         AuditLog[]
+
+  @@map("users")
+}
+
+model Organization {
+  id                      String   @id @default(uuid()) @db.Uuid
+  name                    String   @db.VarChar(160)
+  slug                    String   @unique @db.VarChar(80)
+  timeZone                String   @default("UTC") @map("time_zone") @db.VarChar(80)
+  negativeRatingThreshold Int      @default(2) @map("negative_rating_threshold") @db.SmallInt
+  retentionDays           Int?     @map("retention_days")
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt               DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  memberships OrganizationMembership[]
+  forms       FeedbackForm[]
+  categories  FeedbackCategory[]
+  assignments FormCategoryAssignment[]
+  submissions FeedbackSubmission[]
+  auditLogs   AuditLog[]
+
+  @@map("organizations")
+}
+
+model OrganizationMembership {
+  id             String         @id @default(uuid()) @db.Uuid
+  organizationId String         @map("organization_id") @db.Uuid
+  userId         String         @map("user_id") @db.Uuid
+  role           MembershipRole
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  revokedAt      DateTime?      @map("revoked_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([organizationId, userId])
+  @@index([userId, revokedAt])
+  @@index([organizationId, role])
+  @@map("organization_memberships")
+}
+
+model FeedbackForm {
+  id               String     @id @default(uuid()) @db.Uuid
+  organizationId   String     @map("organization_id") @db.Uuid
+  createdByUserId  String     @map("created_by_user_id") @db.Uuid
+  name             String     @db.VarChar(120)
+  publicSlug       String     @unique @map("public_slug") @db.VarChar(100)
+  title            String     @db.VarChar(160)
+  description      String?    @db.VarChar(1000)
+  successMessage   String     @default("Thank you. Your feedback has been received.") @map("success_message") @db.VarChar(500)
+  status           FormStatus @default(DRAFT)
+  categoryRequired Boolean    @default(true) @map("category_required")
+  commentEnabled   Boolean    @default(true) @map("comment_enabled")
+  commentRequired  Boolean    @default(false) @map("comment_required")
+  commentMaxLength Int        @default(2000) @map("comment_max_length")
+  createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  archivedAt       DateTime?  @map("archived_at") @db.Timestamptz(6)
+  deletedAt        DateTime?  @map("deleted_at") @db.Timestamptz(6)
+
+  organization        Organization             @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  createdBy           User                     @relation("FormCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  categoryAssignments FormCategoryAssignment[]
+  submissions         FeedbackSubmission[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, createdAt])
+  @@map("feedback_forms")
+}
+
+model FeedbackCategory {
+  id              String   @id @default(uuid()) @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  createdByUserId String   @map("created_by_user_id") @db.Uuid
+  name            String   @db.VarChar(80)
+  normalizedName  String   @map("normalized_name") @db.VarChar(80)
+  description     String?  @db.VarChar(300)
+  displayOrder    Int      @default(0) @map("display_order")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  archivedAt      DateTime? @map("archived_at") @db.Timestamptz(6)
+
+  organization Organization             @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  createdBy    User                     @relation("CategoryCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  forms        FormCategoryAssignment[]
+  submissions  FeedbackSubmission[]
+
+  @@unique([organizationId, normalizedName])
+  @@index([organizationId, isActive, displayOrder])
+  @@map("feedback_categories")
+}
+
+model FormCategoryAssignment {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  formId         String   @map("form_id") @db.Uuid
+  categoryId     String   @map("category_id") @db.Uuid
+  displayOrder   Int      @default(0) @map("display_order")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  form         FeedbackForm     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  category     FeedbackCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@unique([formId, categoryId])
+  @@index([formId, displayOrder])
+  @@index([categoryId])
+  @@map("form_category_assignments")
+}
+
+model FeedbackSubmission {
+  id                  String           @id @default(uuid()) @db.Uuid
+  organizationId      String           @map("organization_id") @db.Uuid
+  formId              String           @map("form_id") @db.Uuid
+  categoryId          String           @map("category_id") @db.Uuid
+  rating              Int              @db.SmallInt
+  comment             String?
+  status              SubmissionStatus @default(NEW)
+  workflowStatus      WorkflowStatus   @default(OPEN) @map("workflow_status")
+  priority            Priority         @default(NORMAL)
+  moderationReason    String?          @map("moderation_reason") @db.VarChar(500)
+  resolutionSummary   String?          @map("resolution_summary") @db.VarChar(1000)
+  assigneeUserId      String?          @map("assignee_user_id") @db.Uuid
+  reviewedByUserId    String?          @map("reviewed_by_user_id") @db.Uuid
+  reviewedAt          DateTime?        @map("reviewed_at") @db.Timestamptz(6)
+  resolvedAt          DateTime?        @map("resolved_at") @db.Timestamptz(6)
+  requestId           String           @unique @map("request_id") @db.Uuid
+  idempotencyKeyHash  String?          @map("idempotency_key_hash") @db.Char(64)
+  sourceIpHash        String?          @map("source_ip_hash") @db.Char(64)
+  userAgentHash       String?          @map("user_agent_hash") @db.Char(64)
+  payloadHash         String?          @map("payload_hash") @db.Char(64)
+  duplicateOfId       String?          @map("duplicate_of_id") @db.Uuid
+  submittedAt         DateTime         @default(now()) @map("submitted_at") @db.Timestamptz(6)
+  updatedAt           DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt           DateTime?        @map("deleted_at") @db.Timestamptz(6)
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  form         FeedbackForm        @relation(fields: [formId], references: [id], onDelete: Restrict)
+  category     FeedbackCategory    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  assignee     User?               @relation("FeedbackAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
+  reviewedBy   User?               @relation("FeedbackReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  duplicateOf  FeedbackSubmission? @relation("SubmissionDuplicates", fields: [duplicateOfId], references: [id], onDelete: SetNull)
+  duplicates   FeedbackSubmission[] @relation("SubmissionDuplicates")
+
+  @@index([organizationId, submittedAt(sort: Desc), id(sort: Desc)])
+  @@index([organizationId, rating, submittedAt(sort: Desc)])
+  @@index([organizationId, categoryId, submittedAt(sort: Desc)])
+  @@index([organizationId, status, submittedAt(sort: Desc)])
+  @@index([organizationId, workflowStatus, submittedAt(sort: Desc)])
+  @@index([organizationId, formId, submittedAt(sort: Desc)])
+  @@index([formId, sourceIpHash, submittedAt(sort: Desc)])
+  @@index([formId, payloadHash, submittedAt(sort: Desc)])
+  @@unique([formId, idempotencyKeyHash])
+  @@index([duplicateOfId])
+  @@map("feedback_submissions")
+}
+
+model RateLimitBucket {
+  key       String   @id @db.VarChar(191)
+  count     Int      @default(0)
+  resetAt   DateTime @map("reset_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([resetAt])
+  @@map("rate_limit_buckets")
+}
+
+model AuditLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String?  @map("organization_id") @db.Uuid
+  actorUserId    String?  @map("actor_user_id") @db.Uuid
+  action         String   @db.VarChar(100)
+  entityType     String   @map("entity_type") @db.VarChar(80)
+  entityId       String?  @map("entity_id") @db.Uuid
+  metadata       Json     @default("{}")
+  requestId      String?  @map("request_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  actor         User?         @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([actorUserId, createdAt(sort: Desc)])
+  @@index([entityType, entityId, createdAt(sort: Desc)])
+  @@map("audit_logs")
+}
